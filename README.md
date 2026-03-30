@@ -226,4 +226,4 @@ Final Score = 0.40 × (Anomaly Rate) + 0.40 × (LSTM Prob) + 0.20 × (Heuristics
 
 ## 📄 License
 
-Intended for academic, research, or private deployment. Do not deploy the agent engine into untrusted enterprise networks without undergoing a proper security review.
+**Proprietary and Confidential.** All rights reserved. Do not deploy the agent engine into untrusted enterprise networks without undergoing a proper security review.
