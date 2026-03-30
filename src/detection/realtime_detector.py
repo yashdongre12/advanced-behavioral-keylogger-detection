@@ -240,7 +240,8 @@ def _detection_loop(get_kb_feats, get_sys_metrics, get_proc_snapshot):
 
             # Store in rolling window for LSTM
             with _lock:
-                _feature_window.append(X_raw[0].tolist())
+                X_scaled = _if_scaler.transform(X_raw) if _if_scaler else X_raw
+                _feature_window.append(X_scaled[0].tolist())
                 feat_history = list(_feature_window)
 
             # Run models

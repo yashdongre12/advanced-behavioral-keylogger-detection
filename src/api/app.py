@@ -13,6 +13,11 @@ Run with:
 
 import os
 import sys
+
+# Suppress TensorFlow C++ informational & warning logs
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+
 import time
 import asyncio
 from datetime import datetime
