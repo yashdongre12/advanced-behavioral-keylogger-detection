@@ -27,13 +27,10 @@ from src.feature_engineering.build_features import (
     build_tabular,
     build_scaled_matrix,
     get_feature_columns,
-    TABULAR_OUT,
-    SCALER_OUT,
 )
 
 MODEL_OUT    = os.path.join(BASE, "src/models/isolation_forest_model.pkl")
 METRICS_OUT  = os.path.join(BASE, "src/models/if_metrics.json")
-PRED_LOG     = os.path.join(BASE, "logs/predictions.csv")
 
 # ─── Hyperparameters ──────────────────────────────────────────────────────────
 IF_PARAMS = {
@@ -114,19 +111,23 @@ def train(min_rows: int = 30):
 
 
 def _log_predictions(df: pd.DataFrame, scores: np.ndarray, labels: np.ndarray):
-    """Append IF predictions to the predictions log CSV."""
-    os.makedirs(os.path.dirname(PRED_LOG), exist_ok=True)
-    header = not os.path.exists(PRED_LOG)
-    with open(PRED_LOG, "a", newline="") as f:
-        import csv
-        writer = csv.writer(f)
-        if header:
-            writer.writerow(["timestamp", "model", "raw_score", "label", "is_anomaly"])
-        for i, (score, label) in enumerate(zip(scores, labels)):
-            ts = df["timestamp"].iloc[i].isoformat() if "timestamp" in df.columns else ""
-            writer.writerow([ts, "isolation_forest", round(float(score), 5),
-                             int(label), 1 if label == -1 else 0])
-    print(f"[IsolationForest] Predictions logged → {PRED_LOG}")
+    """Append IF predictions to the predictions MongoDB collection."""
+    from src.utils.db import db
+    if db is None: return
+
+    docs = []
+    for i, (score, label) in enumerate(zip(scores, labels)):
+        ts = df["timestamp"].iloc[i].isoformat() if "timestamp" in df.columns else ""
+        docs.append({
+            "timestamp": ts,
+            "model": "isolation_forest",
+            "raw_score": round(float(score), 5),
+            "label": int(label),
+            "is_anomaly": 1 if label == -1 else 0
+        })
+    if docs:
+        db.predictions.insert_many(docs)
+    print("[IsolationForest] Predictions logged to MongoDB")
 
 
 def load_model():

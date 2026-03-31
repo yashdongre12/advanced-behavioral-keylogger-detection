@@ -22,11 +22,6 @@ import joblib
 BASE = os.path.join(os.path.dirname(__file__), "../../")
 LOGS = os.path.join(BASE, "logs")
 
-KB_FEAT_PATH  = os.path.join(LOGS, "keyboard_features.csv")
-SYS_LOG_PATH  = os.path.join(LOGS, "system_logs.csv")
-PROC_LOG_PATH = os.path.join(LOGS, "process_logs.csv")
-
-TABULAR_OUT   = os.path.join(LOGS, "tabular_features.csv")
 SEQUENCE_OUT  = os.path.join(LOGS, "sequence_features.npy")
 SCALER_OUT    = os.path.join(BASE, "src/models/scaler.pkl")
 
@@ -54,11 +49,17 @@ PROC_AGG_COLS = [
 
 
 # ─── Load helpers ─────────────────────────────────────────────────────────────
-def _load_csv(path: str) -> pd.DataFrame:
-    if not os.path.exists(path):
-        print(f"[FeatureEng] Warning: {path} not found.")
+def _load_mongo(collection_name: str) -> pd.DataFrame:
+    from src.utils.db import db
+    if db is None:
+        print(f"[FeatureEng] Warning: Cannot connect to MongoDB for {collection_name}.")
         return pd.DataFrame()
-    df = pd.read_csv(path)
+        
+    cursor = db[collection_name].find({}, {"_id": 0})
+    df = pd.DataFrame(list(cursor))
+    if df.empty:
+        return df
+        
     if "timestamp" in df.columns:
         df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
         df = df.dropna(subset=["timestamp"])
@@ -102,9 +103,9 @@ def build_tabular(freq: str = "5s") -> pd.DataFrame:
     Merge keyboard, system, and process data into a single tabular DataFrame.
     Each row = one 5-second time bucket.
     """
-    kb_df   = _load_csv(KB_FEAT_PATH)
-    sys_df  = _load_csv(SYS_LOG_PATH)
-    proc_df = _load_csv(PROC_LOG_PATH)
+    kb_df   = _load_mongo("keyboard_features")
+    sys_df  = _load_mongo("system_logs")
+    proc_df = _load_mongo("process_logs")
 
     # Floor timestamps to bucket
     for df in [kb_df, sys_df]:
@@ -136,12 +137,16 @@ def build_tabular(freq: str = "5s") -> pd.DataFrame:
 
 
 def build_and_save_tabular() -> str:
-    """Build tabular features and save to CSV."""
+    """Build tabular features and save to MongoDB."""
     df = build_tabular()
-    os.makedirs(LOGS, exist_ok=True)
-    df.to_csv(TABULAR_OUT, index=False)
-    print(f"[FeatureEng] Tabular features saved: {len(df)} rows → {TABULAR_OUT}")
-    return TABULAR_OUT
+    from src.utils.db import db
+    if db is not None and not df.empty:
+        df_mongo = df.copy()
+        df_mongo["timestamp"] = df_mongo["timestamp"].astype(str)
+        db.tabular_features.delete_many({}) # Replace with new master mapping
+        db.tabular_features.insert_many(df_mongo.to_dict("records"))
+    print(f"[FeatureEng] Tabular features saved: {len(df)} rows to MongoDB")
+    return "db.tabular_features"
 
 
 def get_feature_columns() -> list:

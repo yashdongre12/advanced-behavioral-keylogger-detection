@@ -17,13 +17,13 @@ Saves results to logs/predictions.csv and logs/alerts.csv.
 
 import os
 import sys
-import csv
 import time
 import json
 import threading
 import numpy as np
 from collections import deque
 from datetime import datetime
+from src.utils.db import db
 
 BASE = os.path.join(os.path.dirname(__file__), "../../")
 sys.path.insert(0, BASE)
@@ -55,40 +55,7 @@ _thread  = None
 _feature_window: deque = deque(maxlen=SEQ_LEN * 2)
 
 
-# ─── CSV helpers ──────────────────────────────────────────────────────────────
-PRED_COLS = [
-    "timestamp", "if_score", "if_is_anomaly",
-    "lstm_mse", "lstm_anomaly_prob", "lstm_is_anomaly",
-    "final_threat_score", "threat_level", "reason",
-]
-
-ALERT_COLS = [
-    "timestamp", "threat_level", "final_threat_score",
-    "if_score", "lstm_anomaly_prob",
-    "top_process", "top_process_suspicion",
-    "cpu_percent", "mem_percent", "reason",
-]
-
-
-def _ensure_logs():
-    os.makedirs(os.path.dirname(PRED_LOG), exist_ok=True)
-    for path, cols in [(PRED_LOG, PRED_COLS), (ALERT_LOG, ALERT_COLS)]:
-        if not os.path.exists(path):
-            with open(path, "w", newline="") as f:
-                csv.writer(f).writerow(cols)
-
-
-def _append_pred(row: dict):
-    with open(PRED_LOG, "a", newline="") as f:
-        csv.writer(f).writerow([row.get(c, "") for c in PRED_COLS])
-
-
-def _append_alert(row: dict):
-    with open(ALERT_LOG, "a", newline="") as f:
-        csv.writer(f).writerow([row.get(c, "") for c in ALERT_COLS])
-
-
-# ─── Model loading (lazy) ────────────────────────────────────────────────────
+# Removed CSV helpers
 _if_model  = None
 _if_scaler = None
 _lstm_model = None
@@ -273,7 +240,11 @@ def _detection_loop(get_kb_feats, get_sys_metrics, get_proc_snapshot):
             with _lock:
                 _result_buffer.append(result)
 
-            _append_pred(result)
+            if db is not None:
+                try:
+                    db.predictions.insert_one(result.copy())
+                except Exception as e:
+                    print(f"[Detector] DB Predict Error: {e}")
 
             # Generate alert if threat >= Low
             top_proc = max(procs, key=lambda p: p.get("suspicion_score", 0), default={})
@@ -292,7 +263,12 @@ def _detection_loop(get_kb_feats, get_sys_metrics, get_proc_snapshot):
                 }
                 with _lock:
                     _alert_buffer.append(alert)
-                _append_alert(alert)
+                    
+                if db is not None:
+                    try:
+                        db.alerts.insert_one(alert.copy())
+                    except Exception as e:
+                        print(f"[Detector] DB Alert Error: {e}")
 
         except Exception as e:
             print(f"[Detector] Inference error: {e}")
@@ -313,7 +289,6 @@ def start(get_kb_feats, get_sys_metrics, get_proc_snapshot):
     get_proc_snapshot : callable → list  (latest process list)
     """
     global _running, _thread
-    _ensure_logs()
     _load_models()
     _running = True
     _thread = threading.Thread(

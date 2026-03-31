@@ -8,16 +8,13 @@ backspace/enter frequency, and special key usage.
 """
 
 import time
-import csv
 import threading
-import os
 from collections import deque
 from pynput import keyboard
 from datetime import datetime
+from src.utils.db import db
 
 # ─── Configuration ────────────────────────────────────────────────────────────
-LOG_PATH = os.path.join(os.path.dirname(__file__), "../../logs/keyboard_logs.csv")
-FEATURE_LOG_PATH = os.path.join(os.path.dirname(__file__), "../../logs/keyboard_features.csv")
 WINDOW_SIZE = 30          # Number of key events per analysis window
 FLUSH_INTERVAL = 5.0      # Seconds between feature flushes
 
@@ -31,37 +28,7 @@ _running = False
 _listener = None
 
 
-# ─── CSV helpers ──────────────────────────────────────────────────────────────
-def _ensure_log():
-    os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
-    if not os.path.exists(LOG_PATH):
-        with open(LOG_PATH, "w", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow([
-                "timestamp", "event_type", "key_name",
-                "hold_duration_ms", "inter_key_delay_ms"
-            ])
-
-    os.makedirs(os.path.dirname(FEATURE_LOG_PATH), exist_ok=True)
-    if not os.path.exists(FEATURE_LOG_PATH):
-        with open(FEATURE_LOG_PATH, "w", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow([
-                "timestamp", "typing_speed_kps", "avg_hold_ms",
-                "avg_inter_key_ms", "burst_score", "backspace_ratio",
-                "enter_ratio", "special_key_ratio", "repeat_key_ratio",
-                "window_size"
-            ])
-
-
-def _append_event(row: list):
-    with open(LOG_PATH, "a", newline="") as f:
-        csv.writer(f).writerow(row)
-
-
-def _append_feature(row: list):
-    with open(FEATURE_LOG_PATH, "a", newline="") as f:
-        csv.writer(f).writerow(row)
+# Removed CSV helper functions
 
 
 # ─── Key name normaliser ───────────────────────────────────────────────────────
@@ -151,9 +118,18 @@ def _on_press(key):
             "inter_key_delay_ms": delay,
         }
         _events.append(event)
-    _append_event([
-        datetime.fromtimestamp(ts).isoformat(), "press", name, "", delay or ""
-    ])
+        
+    if db is not None:
+        try:
+            db.keyboard_logs.insert_one({
+                "timestamp": datetime.fromtimestamp(ts).isoformat(),
+                "event_type": "press",
+                "key_name": name,
+                "hold_duration_ms": None,
+                "inter_key_delay_ms": delay
+            })
+        except Exception:
+            pass
 
 
 def _on_release(key):
@@ -178,9 +154,17 @@ def _on_release(key):
                 e["hold_duration_ms"] = hold
                 break
 
-    _append_event([
-        datetime.fromtimestamp(ts).isoformat(), "release", name, hold or "", ""
-    ])
+    if db is not None:
+        try:
+            db.keyboard_logs.insert_one({
+                "timestamp": datetime.fromtimestamp(ts).isoformat(),
+                "event_type": "release",
+                "key_name": name,
+                "hold_duration_ms": hold,
+                "inter_key_delay_ms": None
+            })
+        except Exception:
+            pass
 
 
 # ─── Background feature-flush thread ─────────────────────────────────────────
@@ -194,14 +178,16 @@ def _feature_flush_loop():
             feats = compute_features(events_snapshot[-WINDOW_SIZE:])
             if feats:
                 _feature_buffer.append(feats)
-                _append_feature(list(feats.values()))
+                if db is not None:
+                    try:
+                        db.keyboard_features.insert_one(feats.copy())
+                    except Exception:
+                        pass
 
 
-# ─── Public API ───────────────────────────────────────────────────────────────
 def start():
     """Start keyboard monitoring in a non-blocking background thread."""
     global _running, _listener
-    _ensure_log()
     _running = True
 
     _listener = keyboard.Listener(on_press=_on_press, on_release=_on_release)

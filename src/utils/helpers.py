@@ -6,10 +6,10 @@ threat colour mapping, and log path resolution.
 """
 
 import os
-import csv
 import json
 import math
 from datetime import datetime
+from src.utils.db import db
 
 BASE = os.path.join(os.path.dirname(__file__), "../../")
 LOGS = os.path.join(BASE, "logs")
@@ -55,42 +55,45 @@ def threat_colour(level: str) -> str:
     return THREAT_COLOURS.get(level, "#6b7280")
 
 
-# ─── CSV helpers ──────────────────────────────────────────────────────────────
-def read_csv_tail(path: str, n: int = 100) -> list[dict]:
-    """Read last N rows from a CSV file as list of dicts."""
-    if not os.path.exists(path):
-        return []
+# ─── MongoDB Pagination & Helpers ──────────────────────────────────────────────
+def get_recent_logs(collection_name: str, n: int = 100) -> list[dict]:
+    """Read last N rows from a MongoDB collection, chronologically ordered."""
+    if db is None: return []
     try:
-        with open(path, "r", newline="") as f:
-            reader = list(csv.DictReader(f))
-        return reader[-n:]
+        cursor = db[collection_name].find({}, {"_id": 0}).sort("timestamp", -1).limit(n)
+        docs = list(cursor)
+        docs.reverse()
+        return docs
     except Exception:
         return []
 
 
-def read_csv_all(path: str) -> list[dict]:
-    if not os.path.exists(path):
-        return []
+def get_all_logs(collection_name: str) -> list[dict]:
+    if db is None: return []
     try:
-        with open(path, "r", newline="") as f:
-            return list(csv.DictReader(f))
+        return list(db[collection_name].find({}, {"_id": 0}).sort("timestamp", 1))
     except Exception:
         return []
 
 
-def read_csv_paginated(path: str, page: int = 1, per_page: int = 50) -> dict:
-    rows = read_csv_all(path)
-    total = len(rows)
-    start = (page - 1) * per_page
-    end   = start + per_page
-    return {
-        "total": total,
-        "page": page,
-        "per_page": per_page,
-        "pages": math.ceil(total / per_page) if per_page else 1,
-        "data": rows[start:end],
-    }
-
+def get_paginated_logs(collection_name: str, page: int = 1, per_page: int = 50, filter_query: dict = None) -> dict:
+    if db is None:
+        return {"total": 0, "page": page, "per_page": per_page, "pages": 1, "data": []}
+        
+    q = filter_query or {}
+    try:
+        total = db[collection_name].count_documents(q)
+        skip = (page - 1) * per_page
+        cursor = db[collection_name].find(q, {"_id": 0}).sort("timestamp", -1).skip(skip).limit(per_page)
+        return {
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "pages": math.ceil(total / per_page) if per_page else 1,
+            "data": list(cursor),
+        }
+    except Exception:
+        return {"total": 0, "page": page, "per_page": per_page, "pages": 1, "data": []}
 
 # ─── Log path resolver ────────────────────────────────────────────────────────
 def log_path(filename: str) -> str:

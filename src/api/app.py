@@ -53,7 +53,7 @@ from src.detection.realtime_detector import (
     get_recent_alerts as det_alerts,
 )
 from src.utils.helpers import (
-    read_csv_tail, read_csv_all, read_csv_paginated,
+    get_recent_logs, get_all_logs, get_paginated_logs,
     log_path, jsonify_safe, now_iso,
 )
 from src.utils.report_generator import (
@@ -168,8 +168,8 @@ def keyboard_live():
 
 @app.get("/keyboard/history")
 def keyboard_history(n: int = Query(50, ge=1, le=200)):
-    """Last N keyboard feature rows from CSV."""
-    rows = read_csv_tail(log_path("keyboard_features.csv"), n)
+    """Last N keyboard feature rows from Mongo."""
+    rows = get_recent_logs("keyboard_features", n)
     return jsonify_safe({"count": len(rows), "data": rows})
 
 
@@ -206,53 +206,72 @@ def alerts_history(
     per_page: int = Query(50, ge=1, le=200),
     level: Optional[str] = Query(None),
 ):
-    """Paginated alert history from CSV. Optionally filter by threat level."""
-    result = read_csv_paginated(log_path("alerts.csv"), page, per_page)
-    if level:
-        result["data"] = [r for r in result["data"]
-                          if r.get("threat_level", "").lower() == level.lower()]
+    """Paginated alert history from Mongo. Optionally filter by threat level."""
+    query = {"threat_level": level} if level else None
+    result = get_paginated_logs("alerts", page, per_page, query)
     return jsonify_safe(result)
 
 
 # ─── Historical analytics endpoints ──────────────────────────────────────────
 @app.get("/history/metrics")
 def history_metrics(n: int = Query(100, ge=1, le=1000)):
-    """Last N rows of system metrics from CSV for trend charts."""
-    rows = read_csv_tail(log_path("system_logs.csv"), n)
+    """Last N rows of system metrics from Mongo for trend charts."""
+    rows = get_recent_logs("system_logs", n)
     return jsonify_safe({"count": len(rows), "data": rows})
 
 
 @app.get("/history/threats")
 def history_threats(n: int = Query(100, ge=1, le=1000)):
-    """Last N prediction rows from CSV for threat trend chart."""
-    rows = read_csv_tail(log_path("predictions.csv"), n)
+    """Last N prediction rows from Mongo for threat trend chart."""
+    rows = get_recent_logs("predictions", n)
     return jsonify_safe({"count": len(rows), "data": rows})
 
 
 @app.get("/history/keyboard")
 def history_keyboard(n: int = Query(100, ge=1, le=1000)):
     """Last N keyboard feature rows for trend analysis."""
-    rows = read_csv_tail(log_path("keyboard_features.csv"), n)
+    rows = get_recent_logs("keyboard_features", n)
     return jsonify_safe({"count": len(rows), "data": rows})
 
 
 # ─── CSV download endpoints ───────────────────────────────────────────────────
 @app.get("/download/{log_name}")
 def download_log(log_name: str):
-    """Download a raw log CSV file."""
-    allowed = [
-        "keyboard_logs.csv", "keyboard_features.csv",
-        "process_logs.csv", "system_logs.csv",
-        "predictions.csv", "alerts.csv",
-    ]
+    """Download a raw log CSV file exported from MongoDB."""
+    allowed = {
+        "keyboard_logs.csv": "keyboard_logs", 
+        "keyboard_features.csv": "keyboard_features",
+        "process_logs.csv": "process_logs", 
+        "system_logs.csv": "system_logs",
+        "predictions.csv": "predictions", 
+        "alerts.csv": "alerts",
+    }
     if log_name not in allowed:
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Log not found.")
-    path = log_path(log_name)
-    if not os.path.exists(path):
+        
+    from src.utils.db import db
+    if db is None:
         from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="Log file not yet created.")
-    return FileResponse(path, media_type="text/csv", filename=log_name)
+        raise HTTPException(status_code=500, detail="Database connection failed.")
+        
+    collection = allowed[log_name]
+    cursor = db[collection].find({}, {"_id": 0}).sort("timestamp", 1)
+    
+    import pandas as pd
+    from fastapi.responses import PlainTextResponse
+    
+    df = pd.DataFrame(list(cursor))
+    if df.empty:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Log file is empty.")
+        
+    csv_str = df.to_csv(index=False)
+    return PlainTextResponse(
+        csv_str, 
+        media_type="text/csv", 
+        headers={"Content-Disposition": f"attachment; filename={log_name}"}
+    )
 
 
 # ─── Report endpoints ─────────────────────────────────────────────────────────

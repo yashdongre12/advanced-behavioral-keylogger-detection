@@ -19,7 +19,7 @@ from datetime import datetime
 BASE = os.path.join(os.path.dirname(__file__), "../../")
 sys.path.insert(0, BASE)
 
-from src.utils.helpers import read_csv_all, log_path, now_iso
+from src.utils.helpers import get_all_logs, now_iso
 
 REPORTS_DIR = os.path.join(BASE, "logs/reports")
 
@@ -41,11 +41,11 @@ def build_summary_report() -> dict:
     """
     Read all log CSVs and aggregate into a single summary dict.
     """
-    predictions = read_csv_all(log_path("predictions.csv"))
-    alerts      = read_csv_all(log_path("alerts.csv"))
-    sys_logs    = read_csv_all(log_path("system_logs.csv"))
-    kb_feats    = read_csv_all(log_path("keyboard_features.csv"))
-    proc_logs   = read_csv_all(log_path("process_logs.csv"))
+    predictions = get_all_logs("predictions")
+    alerts      = get_all_logs("alerts")
+    sys_logs    = get_all_logs("system_logs")
+    kb_feats    = get_all_logs("keyboard_features")
+    proc_logs   = get_all_logs("process_logs")
 
     # ── Threat level distribution ──────────────────────────────────────────
     levels = ["Normal", "Low", "Medium", "High", "Critical"]

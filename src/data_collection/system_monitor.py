@@ -7,15 +7,13 @@ intervals and saves to a structured CSV log.
 """
 
 import time
-import csv
 import threading
-import os
 import psutil
 from datetime import datetime
 from collections import deque
+from src.utils.db import db
 
 # ─── Configuration ────────────────────────────────────────────────────────────
-LOG_PATH = os.path.join(os.path.dirname(__file__), "../../logs/system_logs.csv")
 POLL_INTERVAL = 2.0
 _MAX_BUFFER = 1000
 
@@ -40,18 +38,6 @@ COLUMNS = [
     "active_process_count",
     "load_avg_1m",
 ]
-
-
-def _ensure_log():
-    os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
-    if not os.path.exists(LOG_PATH):
-        with open(LOG_PATH, "w", newline="") as f:
-            csv.writer(f).writerow(COLUMNS)
-
-
-def _append_row(row: list):
-    with open(LOG_PATH, "a", newline="") as f:
-        csv.writer(f).writerow(row)
 
 
 # ─── Snapshot collection ──────────────────────────────────────────────────────
@@ -133,16 +119,18 @@ def _monitor_loop():
         with _lock:
             _metrics_buffer.append(metrics)
 
-        _append_row([metrics[c] for c in COLUMNS])
+        if db is not None:
+            try:
+                db.system_logs.insert_one(metrics.copy())
+            except Exception as e:
+                print(f"[SystemMonitor] DB Error: {e}")
 
         elapsed = time.time() - start
         time.sleep(max(0, POLL_INTERVAL - elapsed))
 
 
-# ─── Public API ───────────────────────────────────────────────────────────────
 def start():
     global _running, _thread
-    _ensure_log()
     _running = True
     _thread = threading.Thread(target=_monitor_loop, daemon=True)
     _thread.start()
