@@ -10,7 +10,12 @@ backspace/enter frequency, and special key usage.
 import time
 import threading
 from collections import deque
-from pynput import keyboard
+try:
+    from pynput import keyboard
+    HAS_PYNPUT = True
+except ImportError:
+    HAS_PYNPUT = False
+
 from datetime import datetime
 from src.utils.db import db
 
@@ -41,14 +46,17 @@ def _key_name(key) -> str:
 
 def _is_special(key) -> bool:
     """Return True if key is a special / control key."""
+    if not HAS_PYNPUT: return False
     return isinstance(key, keyboard.Key)
 
 
 def _is_backspace(key) -> bool:
+    if not HAS_PYNPUT: return False
     return key == keyboard.Key.backspace
 
 
 def _is_enter(key) -> bool:
+    if not HAS_PYNPUT: return False
     return key in (keyboard.Key.enter, keyboard.Key.return_)
 
 
@@ -188,6 +196,10 @@ def _feature_flush_loop():
 def start():
     """Start keyboard monitoring in a non-blocking background thread."""
     global _running, _listener
+    if not HAS_PYNPUT:
+        print("[KeyboardMonitor] Skipped on backend: pynput not installed.")
+        return
+
     _running = True
 
     _listener = keyboard.Listener(on_press=_on_press, on_release=_on_release)
@@ -201,6 +213,9 @@ def start():
 def stop():
     """Stop the keyboard listener."""
     global _running, _listener
+    if not HAS_PYNPUT:
+        return
+
     _running = False
     if _listener:
         _listener.stop()
