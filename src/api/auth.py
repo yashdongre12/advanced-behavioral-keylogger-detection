@@ -15,13 +15,12 @@ import time
 from functools import wraps
 
 import pymongo
+from pymongo.errors import ServerSelectionTimeoutError
 from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 
 # ─── Configuration ────────────────────────────────────────────────────────────
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
-MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "sentinel_db")
 _TOKEN_TTL_HOURS  = int(os.getenv("TOKEN_TTL_HOURS", "8"))
 
 # Simple in-memory token store: {token: expiry_timestamp}
@@ -30,16 +29,17 @@ _active_tokens: dict[str, float] = {}
 router   = APIRouter(prefix="/auth", tags=["auth"])
 security = HTTPBearer(auto_error=False)
 
-# ─── MongoDB Connection ───────────────────────────────────────────────────────
-mongo_client = pymongo.MongoClient(MONGO_URI, serverSelectionTimeoutMS=3000)
-db = mongo_client[MONGO_DB_NAME]
-users_collection = db["users"]
+# ─── Shared MongoDB Connection (from db.py) ───────────────────────────────────
+from src.utils.db import db
 
-# Attempt to ensure index on app startup (might fail if Mongo is offline)
-try:
-    users_collection.create_index("username", unique=True)
-except Exception:
-    pass
+if db is not None:
+    users_collection = db["users"]
+    try:
+        users_collection.create_index("username", unique=True)
+    except Exception:
+        pass
+else:
+    users_collection = None
 
 
 # ─── Pydantic models ──────────────────────────────────────────────────────────
@@ -112,6 +112,8 @@ def register(body: RegisterRequest):
     Body: { "username": "user", "password": "...", "email": "...", "phone_number": "..." }
     Creates a new user in the MongoDB database.
     """
+    if users_collection is None:
+        raise HTTPException(status_code=503, detail="Database connection failed. Is MongoDB running?")
     try:
         # Check username uniqueness
         if users_collection.find_one({"username": body.username}):
@@ -131,7 +133,7 @@ def register(body: RegisterRequest):
         })
     except HTTPException:
         raise
-    except pymongo.errors.ServerSelectionTimeoutError:
+    except ServerSelectionTimeoutError:
         raise HTTPException(status_code=503, detail="Database connection error. Is MongoDB running?")
         
     return {"detail": "User registered successfully."}
@@ -144,9 +146,11 @@ def login(body: LoginRequest):
     Body: { "username": "user", "password": "your_password" }
     Returns a Bearer token valid for TOKEN_TTL_HOURS hours.
     """
+    if users_collection is None:
+        raise HTTPException(status_code=503, detail="Database connection failed. Is MongoDB running?")
     try:
         user = users_collection.find_one({"username": body.username})
-    except pymongo.errors.ServerSelectionTimeoutError:
+    except ServerSelectionTimeoutError:
         raise HTTPException(status_code=503, detail="Database connection error. Is MongoDB running?")
         
     if not user or user.get("password_hash") != _hash_password(body.password):

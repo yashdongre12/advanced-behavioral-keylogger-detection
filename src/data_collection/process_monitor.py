@@ -42,6 +42,12 @@ _WHITELIST = {
     "dwm.exe", "explorer.exe", "taskhostw.exe", "runtimebroker.exe",
     "spoolsv.exe", "searchindexer.exe", "audiodg.exe", "conhost.exe",
     "dllhost.exe", "msdtc.exe", "wuauclt.exe", "wermgr.exe",
+    # Common Browsers
+    "chrome.exe", "brave.exe", "msedge.exe", "firefox.exe",
+    # Development tools
+    "python.exe", "node.exe", "cmd.exe", "powershell.exe",
+    # Common system additions
+    "wmiregistrationservice.exe", "mbamessagecenter.exe"
 }
 
 # Keywords that suggest stealth / monitoring software

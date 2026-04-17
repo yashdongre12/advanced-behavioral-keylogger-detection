@@ -32,7 +32,7 @@ BACKEND_URL  = f"http://localhost:{API_PORT}/health"
 def print_banner():
     print("""
 ╔══════════════════════════════════════════════════════════════╗
-║        SENTINEL — Advanced Behavioral Keylogger Detection    ║
+║        ABKDS — Advanced Behavioral Keylogger Detection       ║
 ║        Isolation Forest + LSTM Hybrid Detection System       ║
 ╚══════════════════════════════════════════════════════════════╝
 

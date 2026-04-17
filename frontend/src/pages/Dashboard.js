@@ -199,10 +199,10 @@ export default function Dashboard() {
 
             {/* Report downloads */}
             <div style={{ marginTop: 20, paddingTop: 14, borderTop: '1px solid var(--border)', display: 'flex', gap: 10 }}>
-              <a href="http://localhost:8000/reports/download/csv" target="_blank" rel="noreferrer" style={dlBtn('#c8ff00')}>
+              <a href={`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/reports/download/csv`} target="_blank" rel="noreferrer" style={dlBtn('#c8ff00')}>
                 ⬇ CSV Report
               </a>
-              <a href="http://localhost:8000/reports/download/json" target="_blank" rel="noreferrer" style={dlBtn('#a855f7')}>
+              <a href={`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/reports/download/json`} target="_blank" rel="noreferrer" style={dlBtn('#a855f7')}>
                 ⬇ JSON Report
               </a>
             </div>

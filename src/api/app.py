@@ -23,7 +23,7 @@ import asyncio
 from datetime import datetime
 from typing import Optional
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 
@@ -247,12 +247,10 @@ def download_log(log_name: str):
         "alerts.csv": "alerts",
     }
     if log_name not in allowed:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Log not found.")
         
     from src.utils.db import db
     if db is None:
-        from fastapi import HTTPException
         raise HTTPException(status_code=500, detail="Database connection failed.")
         
     collection = allowed[log_name]
@@ -263,7 +261,6 @@ def download_log(log_name: str):
     
     df = pd.DataFrame(list(cursor))
     if df.empty:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Log file is empty.")
         
     csv_str = df.to_csv(index=False)
@@ -282,7 +279,6 @@ def reports_summary():
         report = build_summary_report()
         return jsonify_safe(report)
     except Exception as e:
-        from fastapi import HTTPException
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -301,7 +297,6 @@ def reports_download_json():
         return FileResponse(path, media_type="application/json",
                             filename=os.path.basename(path))
     except Exception as e:
-        from fastapi import HTTPException
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -314,7 +309,6 @@ def reports_download_csv():
         return FileResponse(path, media_type="text/csv",
                             filename=os.path.basename(path))
     except Exception as e:
-        from fastapi import HTTPException
         raise HTTPException(status_code=500, detail=str(e))
 
 

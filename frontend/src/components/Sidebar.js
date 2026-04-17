@@ -37,11 +37,11 @@ export default function Sidebar({ threatLevel = 'Normal', onLogout }) {
     <aside style={{ ...styles.sidebar, background: bg, borderRight: `1px solid ${border}` }}>
       {/* Logo */}
       <div style={{ ...styles.logoWrap, borderBottom: `1px solid ${border}` }}>
-        <div style={{ ...styles.logoIcon, background: logoBg, border: `1px solid ${logoBd}` }}>
+        <div style={{ ...styles.logoIcon, background: 'var(--accent-dim)', border: `1px solid var(--accent)` }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
             <path d="M12 2L19 5V10C19 15 15.5 19.5 12 21C8.5 19.5 5 15 5 10V5L12 2Z"
-              stroke="#c8ff00" strokeWidth="1.8" fill="rgba(200,255,0,0.1)"/>
-            <path d="M9.5 12L11.2 13.7L14.8 10.1" stroke="#c8ff00" strokeWidth="1.8"
+              stroke="var(--accent)" strokeWidth="1.8" fill="var(--accent-dim)"/>
+            <path d="M9.5 12L11.2 13.7L14.8 10.1" stroke="var(--accent)" strokeWidth="1.8"
               strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </div>
@@ -65,7 +65,7 @@ export default function Sidebar({ threatLevel = 'Normal', onLogout }) {
         {NAV_ITEMS.map(({ path, label }) => (
           <NavLink key={path} to={path} end={path === '/'}
             style={({ isActive }) => isActive
-              ? { ...styles.navItem, ...styles.navActive, color: '#c8ff00' }
+              ? { ...styles.navItem, ...styles.navActive, color: 'var(--accent)' }
               : { ...styles.navItem, color: navClr }
             }
           >
@@ -105,7 +105,7 @@ const styles = {
   },
   logoIcon: {
     width: 34, height: 34, borderRadius: 9, flexShrink: 0,
-    background: 'rgba(200,255,0,0.08)', border: '1px solid rgba(200,255,0,0.2)',
+    background: 'var(--accent-dim)', border: '1px solid var(--accent)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   },
   logoTitle: { fontSize: '0.9rem', fontWeight: 800, color: '#fff', letterSpacing: '0.04em' },
@@ -126,8 +126,8 @@ const styles = {
     textDecoration: 'none', transition: 'background 0.15s, color 0.15s',
   },
   navActive: {
-    background: 'rgba(200,255,0,0.08)', color: '#c8ff00',
-    borderLeft: '2px solid #c8ff00',
+    background: 'var(--accent-dim)', color: 'var(--accent)',
+    borderLeft: '2px solid var(--accent)',
   },
   navDot: { width: 4, height: 4, borderRadius: '50%', background: 'currentColor', opacity: 0.7, flexShrink: 0 },
   logoutBtn: {

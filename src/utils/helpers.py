@@ -22,11 +22,18 @@ def safe_json(obj):
         if math.isnan(obj) or math.isinf(obj):
             return 0.0
         return obj
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    if isinstance(obj, bytes):
+        return obj.decode("utf-8", errors="replace")
+    if isinstance(obj, set):
+        return list(obj)
     if hasattr(obj, "item"):   # numpy scalar
         return obj.item()
     if hasattr(obj, "tolist"):  # numpy array
         return obj.tolist()
-    return obj
+    # Fallback: convert anything else to string to avoid circular refs
+    return str(obj)
 
 
 def jsonify_safe(data):

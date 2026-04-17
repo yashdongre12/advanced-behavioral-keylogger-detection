@@ -89,10 +89,10 @@ export default function Processes() {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
             {suspicious.filter(p => p.suspicion_score > 0.1).slice(0, 6).map(p => (
               <div key={p.pid} style={susChip(p.suspicion_score)}>
-                <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '0.8rem', color: '#e2e8f0' }}>
+                <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '0.8rem', color: 'var(--text-primary)' }}>
                   {p.name}
                 </div>
-                <div style={{ fontSize: '0.65rem', color: '#8ba3c4', marginTop: 2 }}>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 2 }}>
                   PID {p.pid} · Score {p.suspicion_score?.toFixed(2)}
                 </div>
                 <ThreatBadge level={susLevel(p.suspicion_score)} size="sm" />
@@ -133,11 +133,11 @@ export default function Processes() {
                 <tr key={`${p.pid}-${p.name}`} className={sus ? 'suspicious' : ''}
                     onClick={() => setSelectedProc(p)}
                     style={{ cursor: 'pointer' }}>
-                  <td style={{ color: '#e2e8f0', fontWeight: sus ? 600 : 400 }}>
+                  <td style={{ color: 'var(--text-primary)', fontWeight: sus ? 600 : 400 }}>
                     {p.name}
                     {p.is_background && (
-                      <span style={{ marginLeft: 6, fontSize: '0.6rem', color: '#4a6080',
-                        background: '#0d1424', borderRadius: 4, padding: '1px 5px' }}>BG</span>
+                      <span style={{ marginLeft: 6, fontSize: '0.6rem', color: 'var(--text-muted)',
+                        background: 'var(--bg-surface)', borderRadius: 4, padding: '1px 5px' }}>BG</span>
                     )}
                   </td>
                   <td>{p.pid}</td>
@@ -156,8 +156,8 @@ export default function Processes() {
                   <td>{p.num_threads}</td>
                   <td>
                     <span style={{ fontSize: '0.7rem', padding: '2px 7px', borderRadius: 4,
-                      background: p.status === 'running' ? 'rgba(34,197,94,0.1)' : '#0d1424',
-                      color: p.status === 'running' ? '#22c55e' : '#8ba3c4' }}>
+                      background: p.status === 'running' ? 'rgba(34,197,94,0.1)' : 'var(--bg-surface)',
+                      color: p.status === 'running' ? '#22c55e' : 'var(--text-muted)' }}>
                       {p.status}
                     </span>
                   </td>
@@ -170,7 +170,7 @@ export default function Processes() {
           </tbody>
         </table>
         {filtered.length === 0 && (
-          <div style={{ padding: 24, textAlign: 'center', color: '#4a6080' }}>No processes found.</div>
+          <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>No processes found.</div>
         )}
       </div>
 
@@ -181,19 +181,22 @@ export default function Processes() {
   );
 }
 
-const thStyle = { padding: '10px 14px', color: '#4a6080', fontSize: '0.7rem',
+const thStyle = { padding: '10px 14px', color: 'var(--text-muted)', fontSize: '0.7rem',
   fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-  borderBottom: '1px solid #1e2d45', background: '#0d1424', };
+  borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)', };
 
 const searchStyle = {
-  background: '#111827', border: '1px solid #1e2d45', borderRadius: 8,
-  color: '#e2e8f0', padding: '8px 14px', fontSize: '0.82rem',
+  background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8,
+  color: 'var(--text-primary)', padding: '8px 14px', fontSize: '0.82rem',
   width: 280, outline: 'none', fontFamily: "'Share Tech Mono', monospace",
 };
 
-const susChip = (score) => ({
-  background: score > 0.5 ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.06)',
-  border: `1px solid ${score > 0.5 ? 'rgba(239,68,68,0.25)' : 'rgba(245,158,11,0.2)'}`,
-  borderRadius: 10, padding: '10px 14px',
-  display: 'flex', flexDirection: 'column', gap: 4, minWidth: 160,
-});
+const susChip = (score) => {
+  const isHighOrCrit = score >= 0.5;
+  return {
+    background: isHighOrCrit ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.06)',
+    border: `1px solid ${isHighOrCrit ? 'rgba(239,68,68,0.25)' : 'rgba(245,158,11,0.2)'}`,
+    borderRadius: 10, padding: '10px 14px',
+    display: 'flex', flexDirection: 'column', gap: 4, minWidth: 160,
+  };
+};

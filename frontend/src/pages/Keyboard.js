@@ -118,7 +118,7 @@ export default function Keyboard() {
             return (
               <div key={label} style={{ marginBottom: 18 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: '0.78rem', color: '#e2e8f0', fontWeight: 600 }}>{label}</span>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-primary)', fontWeight: 600 }}>{label}</span>
                   <span style={{ fontSize: '0.65rem', fontWeight: 700, color: colour, letterSpacing: '0.1em',
                     fontFamily: "'Share Tech Mono', monospace" }}>{risk}</span>
                 </div>

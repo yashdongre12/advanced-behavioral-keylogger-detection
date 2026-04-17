@@ -54,6 +54,7 @@ class ConnectionManager:
 
 
 manager = ConnectionManager()
+system_manager = ConnectionManager()   # separate pool for /ws/system clients
 
 
 # ─── Background push task ─────────────────────────────────────────────────────
@@ -118,7 +119,7 @@ async def ws_system(websocket: WebSocket):
     """
     WebSocket endpoint that pushes system metrics only (lighter payload).
     """
-    await manager.connect(websocket)
+    await system_manager.connect(websocket)
     try:
         while True:
             sys_m = sys_latest()
@@ -133,7 +134,7 @@ async def ws_system(websocket: WebSocket):
             })))
             await asyncio.sleep(PUSH_INTERVAL)
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
+        system_manager.disconnect(websocket)
 
 
 if __name__ == "__main__":

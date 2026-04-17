@@ -36,7 +36,7 @@ export default function Downloads() {
       const a    = document.createElement('a');
       const ts   = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
       a.href     = url;
-      a.download = `sentinel_report_${ts}.${type}`;
+      a.download = `abkds_report_${ts}.${type}`;
       a.click();
       URL.revokeObjectURL(url);
       setReportState(s => ({ ...s, [type]: 'done' }));
@@ -174,7 +174,7 @@ function RawLogCard({ log }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
         <span style={{ fontSize: '1.3rem' }}>{log.icon}</span>
         <div>
-          <div style={{ color: '#e2e8f0', fontSize: '0.82rem', fontWeight: 600 }}>{log.label}</div>
+          <div style={{ color: 'var(--text-primary)', fontSize: '0.82rem', fontWeight: 600 }}>{log.label}</div>
           <div style={{ color: '#4a6080', fontSize: '0.66rem' }}>{log.desc}</div>
         </div>
       </div>

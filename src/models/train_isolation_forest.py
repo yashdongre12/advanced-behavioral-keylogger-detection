@@ -27,6 +27,7 @@ from src.feature_engineering.build_features import (
     build_tabular,
     build_scaled_matrix,
     get_feature_columns,
+    SCALER_OUT,
 )
 
 MODEL_OUT    = os.path.join(BASE, "src/models/isolation_forest_model.pkl")

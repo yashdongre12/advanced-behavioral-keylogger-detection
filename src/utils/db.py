@@ -14,7 +14,7 @@ if not MONGO_URI:
     MONGO_URI = "mongodb://localhost:27017/"
 
 try:
-    client = MongoClient(MONGO_URI)
+    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
     db = client[DB_NAME]
     
     # Expose collections
@@ -26,9 +26,13 @@ try:
     alerts = db["alerts"]
     tabular_features = db["tabular_features"]
     
-    # Test connection
-    client.server_info()
-    print("[MongoDB] Connected successfully to Atlas/Cluster.")
+    # Test connection using a lightweight ping
+    client.admin.command('ping')
+    
+    if "mongodb+srv" in MONGO_URI:
+        print("[MongoDB] Connected successfully to MongoDB Atlas.")
+    else:
+        print(f"[MongoDB] Connected successfully to MongoDB at {MONGO_URI}")
 except Exception as e:
     print(f"[MongoDB] Failed to connect: {e}")
     # We still assign 'db' but queries will fail if it's completely down.

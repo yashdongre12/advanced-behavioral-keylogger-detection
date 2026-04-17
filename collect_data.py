@@ -42,11 +42,11 @@ def parse_args():
 def print_banner():
     print("""
 ╔══════════════════════════════════════════════════════════════╗
-║  SENTINEL — Telemetry Collection Mode                        ║
+║  ABKDS — Telemetry Collection Mode                           ║
 ║  Collecting: keyboard · processes · system                   ║
 ╚══════════════════════════════════════════════════════════════╝
   - Type normally to generate keyboard behavioral data.
-  - All telemetry is saved to the logs/ directory.
+  - All telemetry is saved to MongoDB.
   - Press Ctrl+C to stop collection early.
 """)
 
